@@ -2,9 +2,11 @@ import random
 import sys
 import gzip
 import re
+import json
+import io
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 random.seed(42)
 
@@ -71,8 +73,18 @@ with open("lexicons/negative") as w6:
 
 
 
-with open(inputfile) as infile:
-	for line in infile:
+# Support both plain text and JSON (news-headlines) input
+if inputfile.endswith('.json'):
+	lines = []
+	with open(inputfile) as infile:
+		for jline in infile:
+			obj = json.loads(jline)
+			lines.append(obj.get('headline', ''))
+else:
+	with open(inputfile) as infile:
+		lines = [l.strip() for l in infile]
+
+for line in lines:
 
 		#6/6 classes
 		nrc_ag = 0
@@ -80,8 +92,16 @@ with open(inputfile) as infile:
 		nrc_jo = 0
 		nrc_sa = 0
 		nrc_pos = 0
-        nrc_neg = 0
-	
+		nrc_neg = 0
+
+		# wordnet counts
+		wd_anger = 0
+		wd_fear = 0
+		wd_disgust = 0
+		wd_joy = 0
+		wd_sadness = 0
+		wd_surprise = 0
+
 
 
 		tokenized_text = word_tokenize(line.lower())
@@ -95,11 +115,26 @@ with open(inputfile) as infile:
 				nrc_fe = nrc_fe + int(nrc[word][2])
 				nrc_jo = nrc_jo + int(nrc[word][3])
 				nrc_sa = nrc_sa + int(nrc[word][4])
-				nrc_dg = nrc_pos + int(nrc[word][5])
-				nrc_sp = nrc_neg + int(nrc[word][6])
+				nrc_pos = nrc_pos + int(nrc[word][5])
+				nrc_neg = nrc_neg + int(nrc[word][6])
+
+			# wordnet
+			if word in wordnet_anger:
+				wd_anger += 1
+			if word in wordnet_fear:
+				wd_fear += 1
+			if word in wordnet_disgust:
+				wd_disgust += 1
+			if word in wordnet_joy:
+				wd_joy += 1
+			if word in wordnet_sadness:
+				wd_sadness += 1
+			if word in wordnet_surprise:
+				wd_surprise += 1
 
 			
 
+		dict_wd = {"ag":wd_anger, "dg":wd_disgust, "fr":wd_fear, "hp":wd_joy, "sd":wd_sadness, "sp":wd_surprise}
 		dict_nrc = {"ag":nrc_ag, "pos":nrc_pos, "fr":nrc_fe, "hp":nrc_jo, "sd":nrc_sa, "neg":nrc_neg}
 		
 		

@@ -1,0 +1,12 @@
+tqdm>=4.50.0
+pandas>=1.5.0
+numpy>=1.23.0
+tensorflow-macos>=2.10.0
+tensorflow-metal>=0.7.0
+seaborn>=0.12.0
+jsonlines>=1.2.0
+scikit-learn>=1.0.0
+matplotlib>=3.5.0
+nltk>=3.7
+transformers>=4.15.0
+torch>=1.10.0
