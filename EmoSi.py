@@ -1,11 +1,9 @@
 
 
-import nltk
-import urllib
-import bs4 as bs
 import re
-from gensim.models import Word2Vec
-import pandas as pd 
+
+import nltk
+import pandas as pd
 
 dataset = pd.read_csv("../input/test1.csv")
 
@@ -30,21 +28,21 @@ for i in range(0, len(X)):
     review = re.sub(r'\s+[a-z]\s+', ' ',review)
     review = re.sub(r'^b\s+', '', review)
     review = re.sub(r'\s+', ' ', str(X[i]))
-    corpus.append(review)    
-    
+    corpus.append(review)
+
 words=[]
 tokenized=[]
 for i in range(len(corpus)):
     words= nltk.word_tokenize(corpus[i])
     tokenized.append(words)
 
-df = pd.DataFrame(list(zip(tokenized, emo)), 
-               columns =['Text', 'Emotion']) 
+df = pd.DataFrame(list(zip(tokenized, emo)),
+               columns =['Text', 'Emotion'])
 
 
-from gensim import corpora, models, similarities
 import gensim
-model = gensim.models.KeyedVectors.load_word2vec_format('..input/embeddings.bin.gz', binary=True) 
+
+model = gensim.models.KeyedVectors.load_word2vec_format('..input/embeddings.bin.gz', binary=True)
 
 l=df['Text']
 
@@ -62,6 +60,7 @@ l
 # row=0
 # score=0
 import csv
+
 with open('embeddings_res.csv', 'w', newline='') as csvFile:
     writer = csv.writer(csvFile)
     for sentence in l:
@@ -72,7 +71,7 @@ with open('embeddings_res.csv', 'w', newline='') as csvFile:
         for word in sentence:
 
             if word in model.vocab:
-                seed_words = open('..input/seedwords1.csv', 'r')
+                seed_words = open('..input/seedwords1.csv')
                 #next(seed_words)
 
                 #print(word)
@@ -105,7 +104,7 @@ with open('embeddings_res.csv', 'w', newline='') as csvFile:
 
         if avg_all == []:
             continue
-        
+
         #print(avg_all)
 
         avg_cols = []
@@ -119,12 +118,11 @@ with open('embeddings_res.csv', 'w', newline='') as csvFile:
         #print(avg_cols, avg_cols.index(max(avg_cols)))
         line = [avg_cols, avg_cols.index(max(avg_cols))]
         writer.writerow(line)
-csvFile.close()        
-#fw.close()   
+csvFile.close()
+#fw.close()
 
 
 
-import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
 
 pred = pd.read_csv('..input/embeddings_res.csv',names=['AVG', 'Emotions'])
@@ -134,6 +132,7 @@ pred
 pred.Emotions.replace([0,1,2,3,4], ['joy','sadness','anger','fear','disgust'], inplace=True)
 
 from sklearn.metrics import classification_report
+
 y_pred = pred.Emotions
 y_true = df.Emotion
 target_names = ['joy','sadness','anger','fear','disgust']
@@ -150,7 +149,7 @@ precision_recall_fscore_support(y_true, y_pred, average='macro')
 
 from sklearn.metrics import precision_score
 
-print("Precision score: {}".format(precision_score(y_true,y_pred)))
+print(f"Precision score: {precision_score(y_true,y_pred)}")
 
 
 

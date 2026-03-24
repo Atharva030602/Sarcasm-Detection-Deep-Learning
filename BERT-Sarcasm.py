@@ -1,32 +1,23 @@
-import pickle
-import pprint
 import json
-import re
-import pandas as pd
-import tensorflow as tf
-import tensorflow_hub as hub
-from datetime import datetime
-from tqdm import tqdm
-from os import listdir
-from os.path import isfile, join, exists
 import os
-import requests
+import pprint
+import re
+import subprocess
 import sys
-from glob import glob
-from itertools import chain
-import time
-import math
-import numpy as np
 import urllib.request
-!pip install namegenerator
+from datetime import datetime
+from os.path import exists
+
+import numpy as np
+import tensorflow as tf
+
+subprocess.check_call([sys.executable, "-m", "pip", "install", "namegenerator"])
 import namegenerator
-!pip install bert-tensorflow
+
+subprocess.check_call([sys.executable, "-m", "pip", "install", "bert-tensorflow"])
 import bert
 import ipywidgets as widgets
-from bert import run_classifier
-from bert import optimization
-from bert import tokenization
-from bert import modeling
+from bert import modeling, optimization, run_classifier, tokenization
 
 #Settings and Defaults#
 #GCS Bucket
@@ -63,9 +54,10 @@ DATA_CACHE = f'gs://{gcs_bucket}/{data_cache}'
 
 
 # Now credentials are set for all future sessions on this TPU.
-!gcloud config set project {project_id}
+subprocess.check_call(["gcloud", "config", "set", "project", project_id])
 
 from google.colab import auth
+
 auth.authenticate_user()
 
 assert 'COLAB_TPU_ADDR' in os.environ, 'ERROR: Not connected to a TPU runtime; please see the first cell in this notebook for instructions!'
@@ -76,7 +68,7 @@ with tf.Session(TPU_ADDRESS) as session:
   pprint.pprint(session.list_devices())
 
   # Upload credentials to TPU.
-  with open('/content/adc.json', 'r') as f:
+  with open('/content/adc.json') as f:
     auth_info = json.load(f)
   tf.contrib.cloud.configure_gcs(session, credentials=auth_info)
 
@@ -88,25 +80,25 @@ random_seed = 42
 
 # Create any buckets or bucket folders needed for code execution.
 
-bucket_status = !gsutil ls {BUCKET_LOC}
+bucket_status = subprocess.getoutput(f"gsutil ls {BUCKET_LOC}")
 if "AccessDeniedException" in bucket_status:
-    !gsutil mb -p {project_id} {BUCKET_LOC}
+    subprocess.check_call(["gsutil", "mb", "-p", project_id, BUCKET_LOC])
     print(f'Created {BUCKET_LOC}')
 else:
     print(f'{BUCKET_LOC} already exists.')
-    
+
 if not tf.io.gfile.exists(TF_CHECKPOINT_ROOT):
     print(f'Created {TF_CHECKPOINT_ROOT}')
     tf.gfile.MakeDirs(TF_CHECKPOINT_ROOT)
 else:
     print(f'{TF_CHECKPOINT_ROOT} already exists.')
-        
+
 if not tf.io.gfile.exists(DATA_DIR):
     print(f'Created {DATA_DIR}')
     tf.gfile.MakeDirs(DATA_DIR)
 else:
     print(f'{DATA_DIR} already exists.')
-          
+
 if not tf.io.gfile.exists(DATA_CACHE):
     print(f'Created {DATA_CACHE}')
     tf.gfile.MakeDirs(DATA_CACHE)
@@ -122,18 +114,18 @@ bert_model_urls = ["https://storage.googleapis.com/bert_models/2018_10_18/uncase
 # this code will create one root to start with
 
 list_of_tf_roots = tf.io.gfile.listdir(TF_CHECKPOINT_ROOT)
-    
+
 if len(list_of_tf_roots) == 0:
     print("There are no models present in your tf checkpoint root. \n Create a new model using this name or a name of your choice:")
     cur_name = namegenerator.gen()
     text_input = input(f'Enter a model name, or <ENTER> for {cur_name}:')
-    if text_input is '':
+    if text_input == '':
         text_input=cur_name
     print(f'Creating folder for {text_input}')
     tf.gfile.MakeDirs(TF_CHECKPOINT_ROOT + '/' + text_input)
     print("Folder created")
-	
-	print("Select a bert model to use")
+
+print("Select a bert model to use")
 bert_model_choice = widgets.Dropdown(options=bert_model_urls, value="https://storage.googleapis.com/bert_models/2018_10_18/cased_L-12_H-768_A-12.zip")
 bert_model_choice
 
@@ -146,21 +138,21 @@ should_download = widgets.Dropdown(options=['Yes','No'], value='Yes')
 should_download
 def create_and_populate_checkpoint_folder(subfolder_name, bert_model_name_with_zip):
     try:
-        
+
         # Check to see if there is a trained model in this folder, in this case,
         # halt and ask the user what to do.
-        
+
         if tf.gfile.Exists(TF_CHECKPOINT_ROOT + '/' + subfolder_name +  'checkpoint'):
             print("There appears to be an existing checkpoint in this sub-folder.")
             print("Do you want to wipe this subfolder and insert a new BERT step 0 checkpoint?")
             answer = input("Type \'yes\' and <Enter> if you want to wipe. Type any other character to not wipe.'")
             if answer == "yes":
-                !gsutil rm {TF_CHECKPOINT_ROOT + '/' + subfolder_name + '*'}
+              subprocess.check_call(f"gsutil rm {TF_CHECKPOINT_ROOT + '/' + subfolder_name + '*'}", shell=True)
             else:
                 print("Ending function early.")
                 return True
 
-        
+
         bert_file_name = bert_model_name_with_zip.split('/')[-1]
         print(f'Retrieving {bert_file_name}')
 
@@ -173,8 +165,11 @@ def create_and_populate_checkpoint_folder(subfolder_name, bert_model_name_with_z
         else:
             print(f'{bert_file_name} already downloaded')
         # Re-unzip the bert model, just in case something funky happened
-        !unzip -o {bert_file_name}
-        !cd {bert_file_name.split('.')[0]};gsutil cp * {TF_CHECKPOINT_ROOT + '/' + subfolder_name}
+        subprocess.check_call(["unzip", "-o", bert_file_name])
+        subprocess.check_call(
+          f"cd {bert_file_name.split('.')[0]} && gsutil cp * {TF_CHECKPOINT_ROOT + '/' + subfolder_name}",
+          shell=True,
+        )
 
         return True
     except Exception as e:
@@ -186,12 +181,12 @@ def create_and_populate_checkpoint_folder(subfolder_name, bert_model_name_with_z
 if should_download.value == "Yes":
     create_and_populate_checkpoint_folder(subfolder_name = tf_checkpoint_sub_dir.value,
                                          bert_model_name_with_zip = bert_model_choice.value)
-										 
-										 
+
+
 def clean_tweet_text(in_text):
-    
+
     try:
-        
+
         # remove URLS
         # regex from https://regexr.com/36fcc
         url_re = re.compile(r'(http|ftp|https)://([\w+?\.\w+])+([a-zA-Z0-9\~\!\@\#\$\%\^\&\*\(\)_\-\=\+\\\/\?\.\:\;\'\,]*)?')
@@ -214,36 +209,31 @@ def clean_tweet_text(in_text):
         # strip text of emjoi
         # https://stackoverflow.com/questions/51217909/removing-all-emojis-from-text
         emoji_re = re.compile("["
-            u"\U0001F600-\U0001F64F"  # emoticons
-            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-            u"\U0001F680-\U0001F6FF"  # transport & map symbols
-            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-            u"\U0001F1F2-\U0001F1F4"  # Macau flag
-            u"\U0001F1E6-\U0001F1FF"  # flags
-            u"\U0001F600-\U0001F64F"
-            u"\U00002702-\U000027B0"
-            u"\U000024C2-\U0001F251"
-            u"\U0001f926-\U0001f937"
-            u"\U0001F1F2"
-            u"\U0001F1F4"
-            u"\U0001F620"
-            u"\u200d"
-            u"\u2640-\u2642"
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U0001F1F2-\U0001F1F4"  # Macau flag
+            "\U0001F1E6-\U0001F1FF"  # flags
+            "\U0001F600-\U0001F64F"
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "\U0001f926-\U0001f937"
+            "\U0001F1F2"
+            "\U0001F1F4"
+            "\U0001F620"
+            "\u200d"
+            "\u2640-\u2642"
             "]+", flags=re.UNICODE)
 
         in_text = emoji_re.sub("",in_text)
-    
+
     except:
         in_text = ""
     return in_text
-	
+
 # Importing our BERT-specific functions
 
-import bert
-from bert import run_classifier
-from bert import optimization
-from bert import tokenization
-from bert import modeling
 
 # Adopted from https://github.com/google-research/bert/blob/master/predicting_movie_reviews_with_bert_on_tf_hub.ipynb
 
@@ -251,33 +241,33 @@ DATA_COLUMN = 'text'
 LABEL_COLUMN = 'label'
 
 train_InputExamples = train_labeled_set.apply(lambda x: bert.run_classifier.InputExample(guid=None, # Globally unique ID for bookkeeping, unused in this example
-                                                                   text_a = x[DATA_COLUMN], 
-                                                                   text_b = None, 
+                                                                   text_a = x[DATA_COLUMN],
+                                                                   text_b = None,
                                                                    label = x[LABEL_COLUMN]), axis = 1)
 
-test_InputExamples = test_labeled_set.apply(lambda x: bert.run_classifier.InputExample(guid=None, 
-                                                                   text_a = x[DATA_COLUMN], 
-                                                                   text_b = None, 
+test_InputExamples = test_labeled_set.apply(lambda x: bert.run_classifier.InputExample(guid=None,
+                                                                   text_a = x[DATA_COLUMN],
+                                                                   text_b = None,
                                                                    label = x[LABEL_COLUMN]), axis = 1)
 
 def create_tokenizer():
-  
+
   """
   Reviews the type of BERT module selected earlier, 
   and create the appropriate tokenizer.
   
   A tokenizer is required for inputing text into BERT
   """
-    
+
   do_lower_case = False
   if 'uncased' in bert_model_choice.value:
         cased_option = False
   else:
         cased_option = True
-        
+
   vocab_file = TF_CHECKPOINT_ROOT + '/' + tf_checkpoint_sub_dir.value + 'vocab.txt'
-  
-  with tf.Graph().as_default():      
+
+  with tf.Graph().as_default():
       return bert.tokenization.FullTokenizer(
           vocab_file=vocab_file, do_lower_case=do_lower_case)
 
@@ -297,8 +287,8 @@ test_features = bert.run_classifier.file_based_convert_examples_to_features(test
 
 # Copy the generated TFRecords to the data_cache, so that the TPU may directly access
 
-!gsutil cp train_features.TFRecord {DATA_CACHE}/train_features.TFRecord
-!gsutil cp test_features.TFRecord {DATA_CACHE}/test_features.TFRecord
+subprocess.check_call(["gsutil", "cp", "train_features.TFRecord", f"{DATA_CACHE}/train_features.TFRecord"])
+subprocess.check_call(["gsutil", "cp", "test_features.TFRecord", f"{DATA_CACHE}/test_features.TFRecord"])
 
 # Adopted from https://github.com/google-research/bert/blob/ffbda2a1aafe530525212d13194cc84d92ed0313/run_classifier.py#L574
 
@@ -411,10 +401,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         f1_score = tf.contrib.metrics.f1_score(label_ids,predictions)
         auc = tf.metrics.auc(label_ids,predictions)
         recall = tf.metrics.recall(label_ids,predictions)
-        precision = tf.metrics.precision(label_ids,predictions) 
+        precision = tf.metrics.precision(label_ids,predictions)
         true_pos = tf.metrics.true_positives(label_ids,predictions)
-        true_neg = tf.metrics.true_negatives(label_ids,predictions)   
-        false_pos = tf.metrics.false_positives(label_ids,predictions)  
+        true_neg = tf.metrics.true_negatives(label_ids,predictions)
+        false_pos = tf.metrics.false_positives(label_ids,predictions)
         false_neg = tf.metrics.false_negatives(label_ids,predictions)
 
         return {
@@ -445,7 +435,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     return output_spec
 
   return model_fn
-  
+
  # These default settings are recommended. You can change based on the experiment.
 
 TRAIN_BATCH_SIZE = 32
@@ -453,7 +443,7 @@ EVAL_BATCH_SIZE = 32
 PREDICT_BATCH_SIZE = 32
 LEARNING_RATE = 2e-5
 NUM_TRAIN_EPOCHS = 6.0
-# Warmup is a period of time where hte learning rate 
+# Warmup is a period of time where hte learning rate
 # is small and gradually increases--usually helps training.
 WARMUP_PROPORTION = 0.1
 # Model configs
@@ -478,15 +468,15 @@ run_config = tf.contrib.tpu.RunConfig(
         iterations_per_loop=ITERATIONS_PER_LOOP,
         num_shards=NUM_TPU_CORES,
         per_host_input_for_training=tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2))
-		
+
 # Compute # train and warmup steps from batch size
 num_train_steps = int(len(train_InputExamples) / TRAIN_BATCH_SIZE * NUM_TRAIN_EPOCHS)
 num_warmup_steps = int(num_train_steps * WARMUP_PROPORTION)
 print(f'Number of training steps is {num_train_steps}, and number of warmup steps is {num_warmup_steps}')
 
 # Adopted from https://github.com/google-research/bert/blob/bee6030e31e42a9394ac567da170a89a98d2062f/run_classifier_with_tfhub.py#L89
-# Generate a model from our model builder factory  
-    
+# Generate a model from our model builder factory
+
 model_fn = model_fn_builder(
     bert_config=  modeling.BertConfig.from_json_file(TF_CHECKPOINT_ROOT + '/' + tf_checkpoint_sub_dir.value + 'bert_config.json'),
     num_labels=len(label_list),
@@ -496,9 +486,9 @@ model_fn = model_fn_builder(
     num_warmup_steps=num_warmup_steps,
     use_tpu=True,
     use_one_hot_embeddings=True)
-	
+
 # Create the estimator
-    
+
 estimator = tf.contrib.tpu.TPUEstimator(
 use_tpu=True,
 model_fn=model_fn,
@@ -514,8 +504,8 @@ train_input_fn = bert.run_classifier.file_based_input_fn_builder(
         seq_length=MAX_SEQ_LENGTH,
         is_training=True,
         drop_remainder=True)
-		
-print(f'Beginning Training!')
+
+print('Beginning Training!')
 current_time = datetime.now()
 estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 print("Training took time ", datetime.now() - current_time)
@@ -525,7 +515,7 @@ test_input_fn = bert.run_classifier.file_based_input_fn_builder(
         seq_length=MAX_SEQ_LENGTH,
         is_training=False,
         drop_remainder=True)
-		
+
 # The calculation for evaluation steps is separate from the calculation for training steps
 eval_steps = int(len(test_InputExamples) / EVAL_BATCH_SIZE)
 print(eval_steps)
@@ -539,11 +529,11 @@ print(results_dict)
 def getPrediction(in_sentences):
   ret = []
   try:
-        
+
       labels = [0, 1]
       input_examples = [run_classifier.InputExample(guid="", text_a = x, text_b = None, label = 0) for x in in_sentences] # here, "" is just a dummy label
       input_features = run_classifier.file_based_convert_examples_to_features(input_examples, label_list, MAX_SEQ_LENGTH, tokenizer,'predict_features.TFRecord')
-      !gsutil cp predict_features.TFRecord {DATA_CACHE}/predict_features.TFRecord
+      subprocess.check_call(["gsutil", "cp", "predict_features.TFRecord", f"{DATA_CACHE}/predict_features.TFRecord"])
       predict_input_fn = run_classifier.file_based_input_fn_builder(input_file=DATA_CACHE + '/predict_features.TFRecord', seq_length=MAX_SEQ_LENGTH, is_training=False, drop_remainder=True)
       predictions = estimator.predict(predict_input_fn)
       #ret = [(sentence, prediction['probabilities'], labels[prediction['labels']]) for sentence, prediction in zip(in_sentences, predictions)]
@@ -552,12 +542,11 @@ def getPrediction(in_sentences):
   except IndexError:
       return(ret)
   return(ret)
-  
+
 # Matching batch size
 pred_sentences = pred_sentences * 8
 preds = getPrediction(pred_sentences)
 
-import numpy as np
 pred_probs = [np.argmax(p['probabilities']) for p in preds]
 final_predictions = list(zip(pred_sentences, pred_probs))
 print(final_predictions)
@@ -579,9 +568,10 @@ print(f'Working from {extra_features_model_folder} as {type(extra_features_model
 
 ## **Only run if you want to create a new folder. Otherwise, select a model from above.
 import urllib
+
 cur_name = namegenerator.gen()
 text_input = input(f'Enter a model name, or <ENTER> for {cur_name}:')
-if text_input is '':
+if text_input == '':
     text_input=cur_name
 print(f'Creating folder for {text_input}')
 tf.gfile.MakeDirs(TF_CHECKPOINT_ROOT + '/' + text_input)
@@ -590,16 +580,19 @@ bert_file_name = bert_model_choice.value.split('/')[-1]
 print(bert_file_name)
 urllib.request.urlretrieve(bert_model_choice.value, bert_file_name )
 print("downloaded")
-!ls
-!unzip -o {bert_file_name}
-!cd {bert_file_name.split('.')[0]};gsutil cp * {TF_CHECKPOINT_ROOT + '/' + extra_features_model_folder}
+subprocess.check_call(["ls"])
+subprocess.check_call(["unzip", "-o", bert_file_name])
+subprocess.check_call(
+  f"cd {bert_file_name.split('.')[0]} && gsutil cp * {TF_CHECKPOINT_ROOT + '/' + extra_features_model_folder}",
+  shell=True,
+)
 
 # to add our extra features
 
 # From https://github.com/google-research/bert/blob/ffbda2a1aafe530525212d13194cc84d92ed0313/run_classifier.py#L161
 
 
-class InputExampleExtraFeatures(object):
+class InputExampleExtraFeatures:
   """A single training/test example for simple sequence classification."""
 
   def __init__(self, guid, text_a, text_b=None, label=None,extra_features=None):
@@ -619,7 +612,7 @@ class InputExampleExtraFeatures(object):
     self.text_b = text_b
     self.label = label
     self.extra_features = extra_features
-	
+
 # From https://github.com/google-research/bert/blob/ffbda2a1aafe530525212d13194cc84d92ed0313/run_classifier.py#L479
 
 def file_based_convert_examples_to_features_with_extra_features(
@@ -638,11 +631,11 @@ def file_based_convert_examples_to_features_with_extra_features(
     def create_int_feature(values):
       f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
       return f
-    
+
     def create_float_feature(values):
       f = tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
       return f
-    
+
 
     features = collections.OrderedDict()
     features["input_ids"] = create_int_feature(feature.input_ids)
@@ -658,32 +651,33 @@ def file_based_convert_examples_to_features_with_extra_features(
     tf_example = tf.train.Example(features=tf.train.Features(feature=features))
     writer.write(tf_example.SerializeToString())
   writer.close()
-  
+
 # From https://github.com/google-research/bert/blob/master/predicting_movie_reviews_with_bert_on_tf_hub.ipynb
 
 DATA_COLUMN = 'text'
 LABEL_COLUMN = 'label'
 
 train_InputExamples_extra_features = train_extra_features.apply(lambda x: InputExampleExtraFeatures(guid=None, # Globally unique ID for bookkeeping, unused in this example
-                                                                   text_a = x[DATA_COLUMN], 
-                                                                   text_b = None, 
+                                                                   text_a = x[DATA_COLUMN],
+                                                                   text_b = None,
                                                                    label = x[LABEL_COLUMN], # adding extra features
                                                                    extra_features = x['extra_features']), axis = 1)
 
-test_InputExamples_extra_features = test_extra_features.apply(lambda x: InputExampleExtraFeatures(guid=None, 
-                                                                   text_a = x[DATA_COLUMN], 
-                                                                   text_b = None, 
+test_InputExamples_extra_features = test_extra_features.apply(lambda x: InputExampleExtraFeatures(guid=None,
+                                                                   text_a = x[DATA_COLUMN],
+                                                                   text_b = None,
                                                                    label = x[LABEL_COLUMN], # adding extra features
                                                                    extra_features = x['extra_features']), axis = 1)
-																   
+
 # From https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L161
 
 import collections
 
-class PaddingInputExample_ExtraFeatures(object):
+
+class PaddingInputExample_ExtraFeatures:
     pass
 
-class InputFeatures_ExtraFeatures(object):
+class InputFeatures_ExtraFeatures:
   """A single set of features of data."""
 
   def __init__(self,
@@ -777,7 +771,7 @@ def convert_single_example_extra_features(ex_index, example, label_list, max_seq
     tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
     tf.logging.info("label: %s (id = %d)" % (example.label, label_id))
     tf.logging.info("extra_features: %s" % " ".join([str(x) for x in example.extra_features]))
-    
+
 
   feature = InputFeatures_ExtraFeatures(
       input_ids=input_ids,
@@ -787,17 +781,17 @@ def convert_single_example_extra_features(ex_index, example, label_list, max_seq
       extra_features=example.extra_features,
       is_real_example=True)
   return feature
-  
+
 MAX_SEQ_LENGTH = 256
 label_list = [0,1]
 train_features = file_based_convert_examples_to_features_with_extra_features(train_InputExamples_extra_features, label_list, MAX_SEQ_LENGTH, tokenizer,'train_extra_features.TFRecord')
 test_features = file_based_convert_examples_to_features_with_extra_features(test_InputExamples_extra_features, label_list, MAX_SEQ_LENGTH, tokenizer,'test_extra_features.TFRecord')
 
-!gsutil cp train_extra_features.TFRecord {DATA_CACHE}/train_extra_features.TFRecord
-!gsutil cp test_extra_features.TFRecord {DATA_CACHE}/test_extra_features.TFRecord
+subprocess.check_call(["gsutil", "cp", "train_extra_features.TFRecord", f"{DATA_CACHE}/train_extra_features.TFRecord"])
+subprocess.check_call(["gsutil", "cp", "test_extra_features.TFRecord", f"{DATA_CACHE}/test_extra_features.TFRecord"])
 # Uncomment these lines if you want to copy from data_cache to your local
-# 
-#!gsutil cp {DATA_CACHE}/train_extra_features.TFRecord train_extra_features.TFRecord 
+#
+#!gsutil cp {DATA_CACHE}/train_extra_features.TFRecord train_extra_features.TFRecord
 #!gsutil cp {DATA_CACHE}/test_extra_features.TFRecord test_extra_features.TFRecord
 #
 
@@ -817,8 +811,8 @@ def create_model_extra_features(bert_config, is_training, input_ids, input_mask,
 
   output_layer = model.get_pooled_output()
   # Here, we make alterations to add the extra features
-  output_layer_extra_features = tf.concat([output_layer,tf.convert_to_tensor(extra_features, dtype=tf.float32)],axis=1)  
-    
+  output_layer_extra_features = tf.concat([output_layer,tf.convert_to_tensor(extra_features, dtype=tf.float32)],axis=1)
+
   hidden_size = output_layer_extra_features.shape[-1].value
 
   output_weights = tf.get_variable(
@@ -844,7 +838,7 @@ def create_model_extra_features(bert_config, is_training, input_ids, input_mask,
     loss = tf.reduce_mean(per_example_loss)
 
     return (loss, per_example_loss, logits, probabilities)
-	
+
 #Adopted from https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L509
 
 def file_based_input_fn_builder_extra_features(input_file, seq_length, is_training,
@@ -871,7 +865,7 @@ def file_based_input_fn_builder_extra_features(input_file, seq_length, is_traini
       if t.dtype == tf.int64:
         t = tf.to_int32(t)
       example[name] = t
-    
+
     return example
 
   def input_fn(params):
@@ -894,7 +888,7 @@ def file_based_input_fn_builder_extra_features(input_file, seq_length, is_traini
     return d
 
   return input_fn
-  
+
 # Adopted from https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/run_classifier.py#L619
 
 def model_fn_builder_extra_features(bert_config, num_labels, init_checkpoint, learning_rate,
@@ -965,10 +959,10 @@ def model_fn_builder_extra_features(bert_config, num_labels, init_checkpoint, le
         f1_score = tf.contrib.metrics.f1_score(label_ids,predictions)
         auc = tf.metrics.auc(label_ids,predictions)
         recall = tf.metrics.recall(label_ids,predictions)
-        precision = tf.metrics.precision(label_ids,predictions) 
+        precision = tf.metrics.precision(label_ids,predictions)
         true_pos = tf.metrics.true_positives(label_ids,predictions)
-        true_neg = tf.metrics.true_negatives(label_ids,predictions)   
-        false_pos = tf.metrics.false_positives(label_ids,predictions)  
+        true_neg = tf.metrics.true_negatives(label_ids,predictions)
+        false_pos = tf.metrics.false_positives(label_ids,predictions)
         false_neg = tf.metrics.false_negatives(label_ids,predictions)
 
         return {
@@ -999,7 +993,7 @@ def model_fn_builder_extra_features(bert_config, num_labels, init_checkpoint, le
     return output_spec
 
   return model_fn
-  
+
 # Compute # train and warmup steps from batch size
 num_train_steps = int(len(train_InputExamples_extra_features) / TRAIN_BATCH_SIZE * 6)
 num_warmup_steps = int(num_train_steps * WARMUP_PROPORTION)
@@ -1014,7 +1008,7 @@ model_fn_extra_features = model_fn_builder_extra_features(
   num_warmup_steps=num_warmup_steps,
   use_tpu=True,
   use_one_hot_embeddings=True)
-  
+
 run_config_extra_features = tf.contrib.tpu.RunConfig(
     cluster=tpu_cluster_resolver,
     model_dir=TF_CHECKPOINT_ROOT + '/' + extra_features_model_folder,
@@ -1023,7 +1017,7 @@ run_config_extra_features = tf.contrib.tpu.RunConfig(
         iterations_per_loop=ITERATIONS_PER_LOOP,
         num_shards=NUM_TPU_CORES,
         per_host_input_for_training=tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2))
-		
+
 estimator_extra_features = tf.contrib.tpu.TPUEstimator(
 use_tpu=True,
 model_fn=model_fn_extra_features,
@@ -1039,8 +1033,8 @@ train_input_fn_extra_features = file_based_input_fn_builder_extra_features(
         seq_length=MAX_SEQ_LENGTH,
         is_training=True,
         drop_remainder=True)
-		
-print(f'Beginning Training!')
+
+print('Beginning Training!')
 current_time = datetime.now()
 estimator_extra_features.train(input_fn=train_input_fn_extra_features, max_steps=num_train_steps)
 print("Training took time ", datetime.now() - current_time)
@@ -1050,7 +1044,7 @@ test_input_fn_extra_features = file_based_input_fn_builder_extra_features(
         seq_length=MAX_SEQ_LENGTH,
         is_training=False,
         drop_remainder=True)
-		
+
 eval_steps = int(len(test_InputExamples_extra_features) / EVAL_BATCH_SIZE)
 print(eval_steps)
 

@@ -1,0 +1,30 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportMissingImports": "none",
+    "reportMissingModuleSource": "none",
+    "reportUndefinedVariable": "none",
+    "reportUndefinedLambdaVariable": "none"
+  },
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/__pycache__/**"
+  ],
+  "python.formatting.provider": "none",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.organizeImports": "always",
+    "source.fixAll.ruff": "always"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "ruff.enable": true,
+  "ruff.nativeServer": "on",
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "files.eol": "\n"
+}

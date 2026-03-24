@@ -1,30 +1,32 @@
 
 import json
 import logging
+import math
 import os
+import queue
 import shutil
 from collections import OrderedDict
-from typing import List, Dict, Tuple, Iterable, Type, Union, Callable
+from collections.abc import Iterable
+from typing import Callable, Dict, List, Tuple, Type, Union
 from zipfile import ZipFile
-import requests
+
 import numpy as np
-from numpy import ndarray
-import transformers
+import requests
 import torch
-from torch import nn, Tensor, device
+import torch.multiprocessing as mp
+import transformers
+from numpy import ndarray
+from torch import Tensor, device, nn
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
-import torch.multiprocessing as mp
 from tqdm.autonotebook import tqdm, trange
-import math
-import queue
 
-from . import __DOWNLOAD_SERVER__
-from .evaluation import SentenceEvaluator
-from .util import import_from_string, batch_to_device, http_get
+from . import __DOWNLOAD_SERVER__, __version__
 from .datasets.EncodeDataset import EncodeDataset
-from .models import Transformer, Pooling
-from . import __version__
+from .evaluation import SentenceEvaluator
+from .models import Pooling, Transformer
+from .util import batch_to_device, http_get, import_from_string
+
 
 class SentenceTransformer(nn.Sequential):
     """
@@ -35,17 +37,17 @@ class SentenceTransformer(nn.Sequential):
     """
     def __init__(self, model_name_or_path: str = None, modules: Iterable[nn.Module] = None, device: str = None):
         if model_name_or_path is not None and model_name_or_path != "":
-            logging.info("Load pretrained SentenceTransformer: {}".format(model_name_or_path))
+            logging.info(f"Load pretrained SentenceTransformer: {model_name_or_path}")
             model_path = model_name_or_path
 
             if not os.path.isdir(model_path) and not model_path.startswith('http://') and not model_path.startswith('https://'):
-                logging.info("Did not find folder {}".format(model_path))
+                logging.info(f"Did not find folder {model_path}")
 
                 if '\\' in model_path or model_path.count('/') > 1:
-                    raise AttributeError("Path {} not found".format(model_path))
+                    raise AttributeError(f"Path {model_path} not found")
 
                 model_path = __DOWNLOAD_SERVER__ + model_path + '.zip'
-                logging.info("Try to download model from server: {}".format(model_path))
+                logging.info(f"Try to download model from server: {model_path}")
 
             if model_path.startswith('http://') or model_path.startswith('https://'):
                 model_url = model_path
@@ -64,7 +66,7 @@ class SentenceTransformer(nn.Sequential):
                 if not os.path.exists(model_path) or not os.listdir(model_path):
                     if model_url[-1] == "/":
                         model_url = model_url[:-1]
-                    logging.info("Downloading sentence transformer model from {} and saving it at {}".format(model_url, model_path))
+                    logging.info(f"Downloading sentence transformer model from {model_url} and saving it at {model_path}")
 
                     model_path_tmp = model_path.rstrip("/").rstrip("\\")+"_part"
                     try:
@@ -77,8 +79,8 @@ class SentenceTransformer(nn.Sequential):
                     except requests.exceptions.HTTPError as e:
                         shutil.rmtree(model_path_tmp)
                         if e.response.status_code == 404:
-                            logging.warning('SentenceTransformer-Model {} not found. Try to create it from scratch'.format(model_url))
-                            logging.warning('Try to create Transformer Model {} with mean pooling'.format(model_name_or_path))
+                            logging.warning(f'SentenceTransformer-Model {model_url} not found. Try to create it from scratch')
+                            logging.warning(f'Try to create Transformer Model {model_name_or_path} with mean pooling')
 
                             model_path = None
                             transformer_model = Transformer(model_name_or_path)
@@ -97,7 +99,7 @@ class SentenceTransformer(nn.Sequential):
 
             #### Load from disk
             if model_path is not None:
-                logging.info("Load SentenceTransformer from folder: {}".format(model_path))
+                logging.info(f"Load SentenceTransformer from folder: {model_path}")
 
                 if os.path.exists(os.path.join(model_path, 'config.json')):
                     with open(os.path.join(model_path, 'config.json')) as fIn:
@@ -121,7 +123,7 @@ class SentenceTransformer(nn.Sequential):
         super().__init__(modules)
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            logging.info("Use pytorch device: {}".format(device))
+            logging.info(f"Use pytorch device: {device}")
 
         self._target_device = torch.device(device)
 
@@ -215,7 +217,7 @@ class SentenceTransformer(nn.Sequential):
         """
         if target_devices is None:
             if torch.cuda.is_available():
-                target_devices = ['cuda:{}'.format(i) for i in range(torch.cuda.device_count())]
+                target_devices = [f'cuda:{i}' for i in range(torch.cuda.device_count())]
             else:
                 logging.info("CUDA is not available. Start 4 CPU worker")
                 target_devices = ['cpu']*4
@@ -266,7 +268,7 @@ class SentenceTransformer(nn.Sequential):
         if chunk_size is None:
             chunk_size = min(math.ceil(len(sentences) / len(pool["processes"]) / 10), 5000)
 
-        logging.info("Chunk data into packages of size {}".format(chunk_size))
+        logging.info(f"Chunk data into packages of size {chunk_size}")
 
         input_queue = pool['input']
         last_chunk_id = 0
@@ -344,7 +346,7 @@ class SentenceTransformer(nn.Sequential):
 
         os.makedirs(path, exist_ok=True)
 
-        logging.info("Save model to {}".format(path))
+        logging.info(f"Save model to {path}")
         contained_modules = []
 
         for idx, name in enumerate(self._modules):
@@ -634,7 +636,7 @@ class SentenceTransformer(nn.Sequential):
         elif scheduler == 'warmupcosinewithhardrestarts':
             return transformers.get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total)
         else:
-            raise ValueError("Unknown scheduler {}".format(scheduler))
+            raise ValueError(f"Unknown scheduler {scheduler}")
 
     @property
     def device(self) -> device:
@@ -686,19 +688,22 @@ class SentenceTransformer(nn.Sequential):
 
 ##Adopted From SBERT for Binary classification
 
-from . import SentenceEvaluator, SimilarityFunction
-import torch
-from torch.utils.data import DataLoader
-import logging
-from tqdm import tqdm
-from sentence_transformers.util import batch_to_device
-import os
 import csv
-from sklearn.metrics.pairwise import paired_cosine_distances, paired_euclidean_distances, paired_manhattan_distances
-from sklearn.metrics import average_precision_score
-import numpy as np
 from typing import List
+
+from sentence_transformers.util import batch_to_device
+from sklearn.metrics import average_precision_score
+from sklearn.metrics.pairwise import (
+    paired_cosine_distances,
+    paired_euclidean_distances,
+    paired_manhattan_distances,
+)
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 from ..readers import InputExample
+from . import SentenceEvaluator
+
 
 class BinaryClassificationEvaluator(SentenceEvaluator):
     """
@@ -783,11 +788,11 @@ class BinaryClassificationEvaluator(SentenceEvaluator):
             f1, precision, recall, f1_threshold = self.find_best_f1_and_threshold(scores, labels, reverse)
             ap = average_precision_score(labels, scores * (1 if reverse else -1))
 
-            logging.info("Accuracy with {}:           {:.2f}\t(Threshold: {:.4f})".format(name, acc * 100, acc_threshold))
-            logging.info("F1 with {}:                 {:.2f}\t(Threshold: {:.4f})".format(name, f1 * 100, f1_threshold))
-            logging.info("Precision with {}:          {:.2f}".format(name, precision * 100))
-            logging.info("Recall with {}:             {:.2f}".format(name, recall * 100))
-            logging.info("Average Precision with {}:  {:.2f}\n".format(name, ap * 100))
+            logging.info(f"Accuracy with {name}:           {acc * 100:.2f}\t(Threshold: {acc_threshold:.4f})")
+            logging.info(f"F1 with {name}:                 {f1 * 100:.2f}\t(Threshold: {f1_threshold:.4f})")
+            logging.info(f"Precision with {name}:          {precision * 100:.2f}")
+            logging.info(f"Recall with {name}:             {recall * 100:.2f}")
+            logging.info(f"Average Precision with {name}:  {ap * 100:.2f}\n")
 
             file_output_data.extend([acc, acc_threshold, f1, precision, recall, f1_threshold, ap])
 

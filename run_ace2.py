@@ -12,16 +12,16 @@ Architecture:
   [contextual_embedding ; affective_embedding] -> FC layers -> sarcasm prediction
 """
 import json
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-from transformers import BertTokenizer, BertModel
-from sentence_transformers import SentenceTransformer
 from nltk.tokenize import word_tokenize
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset
 
 # =========================================================================
 # STEP 1: Load Dataset
@@ -33,7 +33,7 @@ print("\n[1/5] Loading dataset...")
 
 headlines = []
 labels = []
-with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", "r", encoding="utf-8") as f:
+with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", encoding="utf-8") as f:
     for line in f:
         obj = json.loads(line)
         headlines.append(obj["headline"])
@@ -153,7 +153,7 @@ print(f"  Train: {len(train_idx)}, Test: {len(test_idx)}")
 # =========================================================================
 class MultiHeadAttention(nn.Module):
     def __init__(self, num_units, num_heads=2, dropout_rate=0.3):
-        super(MultiHeadAttention, self).__init__()
+        super().__init__()
         self.num_units = num_units
         self.num_heads = num_heads
         self.Q_proj = nn.Sequential(nn.Linear(num_units, num_units), nn.ReLU())
@@ -194,7 +194,7 @@ class MultiHeadAttention(nn.Module):
 class AffectiveBiLSTM_MHA(nn.Module):
     """BiLSTM with multi-head label attention for affective features."""
     def __init__(self, input_dim, hidden_dim, num_heads=2, num_layers=1, dropout=0.3):
-        super(AffectiveBiLSTM_MHA, self).__init__()
+        super().__init__()
         self.hidden_dim = hidden_dim
         self.bilstm = nn.LSTM(input_dim, hidden_dim // 2, batch_first=True,
                               num_layers=num_layers, bidirectional=True)
@@ -227,7 +227,7 @@ class ACE2Model(nn.Module):
     """
     def __init__(self, affective_input_dim=12, affective_hidden_dim=64,
                  num_heads=2, num_classes=2, dropout=0.3):
-        super(ACE2Model, self).__init__()
+        super().__init__()
 
         # Contextual branch: Fine-tuned BERT (extracted from cached SBERT)
         sbert = SentenceTransformer('bert-base-nli-mean-tokens')
@@ -302,8 +302,8 @@ total_params = sum(p.numel() for p in model.parameters())
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"  Total parameters: {total_params:,}")
 print(f"  Trainable parameters: {trainable_params:,}")
-print(f"  Frozen BERT layers: 0-7, Fine-tuned: 8-11 + pooler")
-print(f"  Combined: BERT(768) + MHA-BiLSTM(128) = 896-dim\n")
+print("  Frozen BERT layers: 0-7, Fine-tuned: 8-11 + pooler")
+print("  Combined: BERT(768) + MHA-BiLSTM(128) = 896-dim\n")
 
 # Use lower LR for BERT, higher for new layers
 bert_params = [p for n, p in model.named_parameters() if 'bert' in n and p.requires_grad]
@@ -396,8 +396,8 @@ print(classification_report(all_labels, all_preds, target_names=["Not Sarcastic"
 print("\n" + "=" * 60)
 print("Results Comparison:")
 print("=" * 60)
-print(f"  SBERT only (contextual):                83.47%")
-print(f"  BiLSTM+Attention only:                  84.77%")
-print(f"  ACE 1 (frozen SBERT + BiLSTM):          85.24%")
+print("  SBERT only (contextual):                83.47%")
+print("  BiLSTM+Attention only:                  84.77%")
+print("  ACE 1 (frozen SBERT + BiLSTM):          85.24%")
 print(f"  ACE 2 (fine-tuned BERT + MHA-BiLSTM):   {best_acc*100:.2f}%")
 print("=" * 60)

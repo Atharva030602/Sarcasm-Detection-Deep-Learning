@@ -1,24 +1,20 @@
-# -*- coding: utf-8 -*-
 
 
 """Encoders for text data.
 * TextEncoder: base class
 * SubwordTextEncoder: invertible
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
-from itertools import chain
 import re
 import time
+from itertools import chain
+
 import six
-from six.moves import range  # pylint: disable=redefined-builtin
+
 # from tensor2tensor.data_generators import tokenizer
-
 import tensorflow as tf
-
+from six.moves import range  # pylint: disable=redefined-builtin
 
 # Reserved tokens for things like padding and EOS symbols.
 PAD = "[PAD]"
@@ -42,8 +38,8 @@ else:
 # '\\' is converted to '\'
 # '\213;' is converted to unichr(213)
 _UNESCAPE_REGEX = re.compile(r"\\u|\\\\|\\([0-9]+);")
-_ESCAPE_CHARS = set(u"\\_u;0123456789")
-_SPECIAL_CHARS = set(u"!\"\'#$%&*()`+,-./:;<=>?@[]^_{}~|")
+_ESCAPE_CHARS = set("\\_u;0123456789")
+_SPECIAL_CHARS = set("!\"\'#$%&*()`+,-./:;<=>?@[]^_{}~|")
 
 # Unicode utility functions that work with Python 2 and 3
 def native_to_unicode(s):
@@ -91,7 +87,7 @@ def to_unicode(s, ignore_errors=False):
 #   return ids
 
 
-class TextEncoder(object):
+class TextEncoder:
   """Base class for converting from ints to/from human readable strings."""
 
   def __init__(self, num_reserved_ids=NUM_RESERVED_TOKENS):
@@ -176,18 +172,18 @@ def _escape_token(token, alphabet):
   if not isinstance(token, six.text_type):
     raise ValueError("Expected string type for token, got %s" % type(token))
 
-  token = token.replace(u"\\", u"\\\\").replace(u"_", u"\\u")
-  ret = [c if c in alphabet and c != u"\n" else r"\%d;" % ord(c) for c in token]
-  return u"".join(ret) + "_"
+  token = token.replace("\\", "\\\\").replace("_", "\\u")
+  ret = [c if c in alphabet and c != "\n" else r"\%d;" % ord(c) for c in token]
+  return "".join(ret) + "_"
 
 def _my_escape_token(token, alphabet):
 
   if not isinstance(token, six.text_type):
     raise ValueError("Expected string type for token, got %s" % type(token))
 
-  token = token.replace(u"\\", u"\\\\").replace(u"_", u"\\u")
-  ret = [c if c in alphabet and c != u"\n" else r"\%d;" % ord(c) for c in token]
-  return "_" + u"".join(ret)
+  token = token.replace("\\", "\\\\").replace("_", "\\u")
+  ret = [c if c in alphabet and c != "\n" else r"\%d;" % ord(c) for c in token]
+  return "_" + "".join(ret)
 
 # def _unescape_token(escaped_token):
 #   """Inverse of _escape_token().
@@ -246,7 +242,7 @@ class SubwordTextEncoder(TextEncoder):
     # self.filename = filename
     # if filename is not None:
     #   self._load_from_file(filename)
-    super(SubwordTextEncoder, self).__init__()
+    super().__init__()
 
   # def encode(self, s):
   #   """Converts a native string to a list of subtoken ids.
@@ -556,7 +552,7 @@ class SubwordTextEncoder(TextEncoder):
     if min_count < 1:
       min_count = 1
     for i in range(num_iterations):
-      tf.logging.info("Iteration {0}".format(i))
+      tf.logging.info(f"Iteration {i}")
 
       # Collect all substrings of the encoded token that break along current
       # subtoken boundaries.
@@ -584,9 +580,9 @@ class SubwordTextEncoder(TextEncoder):
 
         iter_time_secs = time.time() - iter_start_time
         if iter_time_secs > 0.1:
-          tf.logging.info(u"Processing token [{0}] took {1} seconds, consider "
+          tf.logging.info(f"Processing token [{token}] took {iter_time_secs} seconds, consider "
                           "setting Text2TextProblem.max_subtoken_length to a "
-                          "smaller value.".format(token, iter_time_secs))
+                          "smaller value.")
 
       # Array of sets of candidate subtoken strings, by length.
       len_to_subtoken_strings = []
@@ -650,7 +646,7 @@ class SubwordTextEncoder(TextEncoder):
                                     if char not in new_subtoken_strings)
 
     # print(new_subtoken_strings)
-    print("total vocab size : {}, {} seconds elapsed ".format(self.vocab_size, time.time() - start_time))
+    print(f"total vocab size : {self.vocab_size}, {time.time() - start_time} seconds elapsed ")
     # print(oov_list)
 
     self._init_subtokens_from_list(new_subtoken_strings)

@@ -1,4 +1,8 @@
+import os
+import subprocess
+
 import tokenizers
+
 bwpt = tokenizers.BertWordPieceTokenizer(
     vocab_file=None,
     add_special_tokens=True,
@@ -24,28 +28,34 @@ bwpt.train(
 
 bwpt.save(".../working/", "English")
 
-!python create_pretraining_data.py \
-    --input_file=/../input/custom-corpus/clean.txt \
-    --output_file=.../working/tf_examples.tfrecord \
-    --vocab_file=.../working/English-vocab.txt \
-    --do_lower_case=True \
-    --max_seq_length=128 \
-    --max_predictions_per_seq=20 \
-    --masked_lm_prob=0.15 \
-    --random_seed=42 \
-    --dupe_factor=5
+subprocess.check_call([
+    "python",
+    "create_pretraining_data.py",
+    "--input_file=/../input/custom-corpus/clean.txt",
+    "--output_file=.../working/tf_examples.tfrecord",
+    "--vocab_file=.../working/English-vocab.txt",
+    "--do_lower_case=True",
+    "--max_seq_length=128",
+    "--max_predictions_per_seq=20",
+    "--masked_lm_prob=0.15",
+    "--random_seed=42",
+    "--dupe_factor=5",
+])
 
-!python run_pretraining.py \
-    --input_file=gs://tf-large-model/*.tfrecord \
-    --output_dir=gs://tf-large-model/model/ \
-    --do_train=True \
-    --do_eval=True \
-    --bert_config_file=.../input/bert-large-uncased/config.json \
-    --train_batch_size=32 \
-    --max_seq_length=128 \
-    --max_predictions_per_seq=20 \
-    --num_train_steps=20 \
-    --num_warmup_steps=10 \
-    --learning_rate=2e-5 \
-    --use_tpu=True \
-    --tpu_name=$TPU_NAME
+subprocess.check_call([
+    "python",
+    "run_pretraining.py",
+    "--input_file=gs://tf-large-model/*.tfrecord",
+    "--output_dir=gs://tf-large-model/model/",
+    "--do_train=True",
+    "--do_eval=True",
+    "--bert_config_file=.../input/bert-large-uncased/config.json",
+    "--train_batch_size=32",
+    "--max_seq_length=128",
+    "--max_predictions_per_seq=20",
+    "--num_train_steps=20",
+    "--num_warmup_steps=10",
+    "--learning_rate=2e-5",
+    "--use_tpu=True",
+    f"--tpu_name={os.environ.get('TPU_NAME', '')}",
+])

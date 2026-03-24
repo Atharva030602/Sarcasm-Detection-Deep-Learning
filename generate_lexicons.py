@@ -4,8 +4,9 @@ Creates: lexicons/nrc.txt, lexicons/anger, lexicons/fear, lexicons/sadness,
          lexicons/joy, lexicons/positive, lexicons/negative
 """
 import os
-from nltk.corpus import wordnet as wn
+
 from nltk.corpus import sentiwordnet as swn
+from nltk.corpus import wordnet as wn
 
 LEXICON_DIR = "lexicons"
 os.makedirs(LEXICON_DIR, exist_ok=True)

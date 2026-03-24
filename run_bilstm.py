@@ -3,20 +3,19 @@ Run BiLSTM with Attention on the News Headlines Sarcasm Detection dataset.
 Uses the LSTMAttention model from BiLSTM-Multihead-Attention.py.
 """
 import json
-import numpy as np
+from collections import Counter
+
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
-from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-from collections import Counter
+from torch.utils.data import DataLoader, TensorDataset
 
 # ---- Load Dataset ----
 print("Loading dataset...")
 headlines = []
 labels = []
-with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", "r", encoding="utf-8") as f:
+with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", encoding="utf-8") as f:
     for line in f:
         obj = json.loads(line)
         headlines.append(obj["headline"].lower())
@@ -72,7 +71,7 @@ print(f"Train: {len(X_train)}, Test: {len(X_test)}")
 # ---- Define Model (from BiLSTM-Multihead-Attention.py) ----
 class LSTMAttention(torch.nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, label_size, num_layers=1, dropout=0.3):
-        super(LSTMAttention, self).__init__()
+        super().__init__()
         self.hidden_dim = hidden_dim
         self.use_gpu = torch.cuda.is_available()
         self.num_layers = num_layers

@@ -1,10 +1,9 @@
+import io
+import json
 import random
 import sys
-import gzip
-import re
-import json
-import io
-from nltk.tokenize import sent_tokenize, word_tokenize
+
+from nltk.tokenize import word_tokenize
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
@@ -106,9 +105,9 @@ for line in lines:
 
 		tokenized_text = word_tokenize(line.lower())
 
-		
+
 		for word in tokenized_text:
-			
+
 			#nrc
 			if word in nrc:
 				nrc_ag = nrc_ag + int(nrc[word][0])
@@ -132,15 +131,15 @@ for line in lines:
 			if word in wordnet_surprise:
 				wd_surprise += 1
 
-			
+
 
 		dict_wd = {"ag":wd_anger, "dg":wd_disgust, "fr":wd_fear, "hp":wd_joy, "sd":wd_sadness, "sp":wd_surprise}
 		dict_nrc = {"ag":nrc_ag, "pos":nrc_pos, "fr":nrc_fe, "hp":nrc_jo, "sd":nrc_sa, "neg":nrc_neg}
-		
-		
+
+
 		#random label in case of max value tie
 		nrc_label = random.choice([key for key in dict_nrc if dict_nrc[key]==max(dict_nrc.values())])
-		
+
 
 		print (line.strip(),"\t",','.join(str(x) for x in dict_wd.values()),",",','.join(str(x) for x in dict_nrc.values()))
 

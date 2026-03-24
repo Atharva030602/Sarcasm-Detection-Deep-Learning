@@ -11,14 +11,14 @@ Architecture:
   [contextual_embedding ; affective_embedding] -> FC layers -> sarcasm prediction
 """
 import json
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
-from collections import Counter
 from nltk.tokenize import word_tokenize
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, TensorDataset
 
 # =========================================================================
 # STEP 1: Load Dataset
@@ -30,7 +30,7 @@ print("\n[1/5] Loading dataset...")
 
 headlines = []
 labels = []
-with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", "r", encoding="utf-8") as f:
+with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", encoding="utf-8") as f:
     for line in f:
         obj = json.loads(line)
         headlines.append(obj["headline"])
@@ -140,7 +140,7 @@ print(f"  Train: {len(X_affect_train)}, Test: {len(X_affect_test)}")
 class AffectiveBiLSTM(nn.Module):
     """BiLSTM with attention for processing affective features."""
     def __init__(self, input_dim, hidden_dim, num_layers=1, dropout=0.3):
-        super(AffectiveBiLSTM, self).__init__()
+        super().__init__()
         self.hidden_dim = hidden_dim
         self.bilstm = nn.LSTM(input_dim, hidden_dim // 2, batch_first=True,
                               num_layers=num_layers, bidirectional=True)
@@ -172,7 +172,7 @@ class ACE1Model(nn.Module):
     """
     def __init__(self, contextual_dim=768, affective_input_dim=12,
                  affective_hidden_dim=128, num_classes=2, dropout=0.3):
-        super(ACE1Model, self).__init__()
+        super().__init__()
 
         # Affective branch: BiLSTM with attention
         self.affective_bilstm = AffectiveBiLSTM(
@@ -228,7 +228,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, factor=0.5)
 
 print(f"  Model parameters: {sum(p.numel() for p in model.parameters()):,}")
-print(f"  Combined embedding: SBERT(768) + BiLSTM-Affective(128) = 896-dim\n")
+print("  Combined embedding: SBERT(768) + BiLSTM-Affective(128) = 896-dim\n")
 
 EPOCHS = 15
 best_acc = 0
@@ -304,7 +304,7 @@ print(classification_report(y_test, all_preds, target_names=["Not Sarcastic", "S
 print("\n" + "=" * 60)
 print("Results Comparison:")
 print("=" * 60)
-print(f"  SBERT only (contextual):          83.47%")
-print(f"  BiLSTM+Attention only:            84.77%")
+print("  SBERT only (contextual):          83.47%")
+print("  BiLSTM+Attention only:            84.77%")
 print(f"  ACE 1 (contextual + affective):   {best_acc*100:.2f}%")
 print("=" * 60)

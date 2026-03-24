@@ -1,9 +1,9 @@
-import torch
-from torch import Tensor
-from torch import nn
-from typing import Union, Tuple, List, Iterable, Dict
-import os
 import json
+import os
+from typing import Dict
+
+import torch
+from torch import Tensor, nn
 
 
 class Pooling(nn.Module):
@@ -23,7 +23,7 @@ class Pooling(nn.Module):
                  pooling_mode_mean_tokens: bool = True,
                  pooling_mode_mean_sqrt_len_tokens: bool = False,
                  ):
-        super(Pooling, self).__init__()
+        super().__init__()
 
         self.config_keys = ['word_embedding_dimension',  'pooling_mode_cls_token', 'pooling_mode_mean_tokens', 'pooling_mode_max_tokens', 'pooling_mode_mean_sqrt_len_tokens']
 
@@ -87,5 +87,5 @@ class Pooling(nn.Module):
             config = json.load(fIn)
 
         return Pooling(**config)
-		
+
 #Adopted from SBERT

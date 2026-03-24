@@ -3,17 +3,17 @@ Run SBERT (Sentence-BERT) on the News Headlines Sarcasm Detection dataset.
 Uses sentence-transformers to encode headlines and train a sarcasm classifier.
 """
 import json
-import numpy as np
+
 from sentence_transformers import SentenceTransformer
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import accuracy_score, classification_report
+from sklearn.model_selection import train_test_split
 
 # Load the dataset
 print("Loading dataset...")
 headlines = []
 labels = []
-with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", "r", encoding="utf-8") as f:
+with open("datasets/news-headlines/Sarcasm_Headlines_Dataset.json", encoding="utf-8") as f:
     for line in f:
         obj = json.loads(line)
         headlines.append(obj["headline"])

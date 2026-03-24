@@ -1,15 +1,14 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import sys
+import time
 import unicodedata
+
 import six
-from six.moves import range  # pylint: disable=redefined-builtin
+
 # from tensor2tensor.utils import mlperf_log
 import tensorflow as tf
-import time
+from six.moves import range  # pylint: disable=redefined-builtin
 
 # Conversion between Unicode and UTF-8, if required (on Python2)
 _native_to_unicode = (lambda s: s.decode("utf-8")) if six.PY2 else (lambda s: s)
@@ -44,7 +43,7 @@ def encode(text):
     if is_alnum[pos] != is_alnum[pos - 1]:
       if not is_alnum[pos]:
         token = text[token_start:pos]
-        if token != u" " or token_start == 0:
+        if token != " " or token_start == 0:
           add_remaining = False
           ret.append(token)
       else:
@@ -68,7 +67,7 @@ def decode(tokens):
   ret = []
   for i, token in enumerate(tokens):
     if i > 0 and token_is_alnum[i - 1] and token_is_alnum[i]:
-      ret.append(u" ")
+      ret.append(" ")
     ret.append(token)
   return "".join(ret)
 

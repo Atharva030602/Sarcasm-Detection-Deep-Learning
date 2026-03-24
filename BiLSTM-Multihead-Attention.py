@@ -1,21 +1,15 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import *
-import torch
-import numpy as np
-import torch.nn as nn
-from sklearn.utils import shuffle
 from torch.autograd import Variable
-from models.BaseModel import BaseModel
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 
 class LSTM_attention(nn.Module):
     ''' Compose with two layers '''
     def __init__(self,lstm_hidden,bilstm_flag,data):
-        super(LSTM_attention, self).__init__()
+        super().__init__()
 
         self.lstm = nn.LSTM(lstm_hidden * 4, lstm_hidden, num_layers=1, batch_first=True, bidirectional=bilstm_flag)
         #self.slf_attn = multihead_attention(data.HP_hidden_dim,num_heads = data.num_attention_head, dropout_rate=data.HP_dropout)
@@ -48,7 +42,7 @@ class multihead_attention(nn.Module):
             causality: Boolean. If true, units that reference the future are masked.
             num_heads: An int. Number of heads.
         '''
-        super(multihead_attention, self).__init__()
+        super().__init__()
         self.gpu = gpu
         self.num_units = num_units
         self.num_heads = num_heads
@@ -104,7 +98,7 @@ class multihead_attention(nn.Module):
 class LSTMAttention(torch.nn.Module):
     def __init__(self,opt):
 
-        super(LSTMAttention, self).__init__()
+        super().__init__()
         self.hidden_dim = opt.hidden_dim
         self.batch_size = opt.batch_size
         self.use_gpu = torch.cuda.is_available()
@@ -112,19 +106,19 @@ class LSTMAttention(torch.nn.Module):
         self.word_embeddings = nn.Embedding(opt.vocab_size, opt.embedding_dim)
         self.word_embeddings.weight = nn.Parameter(opt.embeddings,requires_grad=opt.embedding_training)
 #        self.word_embeddings.weight.data.copy_(torch.from_numpy(opt.embeddings))
-  
+
         self.num_layers = opt.lstm_layers
         #self.bidirectional = True
         self.dropout = opt.keep_dropout
         self.bilstm = nn.LSTM(opt.embedding_dim, opt.hidden_dim // 2, batch_first=True,num_layers=self.num_layers, dropout=self.dropout, bidirectional=True)
         self.hidden2label = nn.Linear(opt.hidden_dim, opt.label_size)
         self.hidden = self.init_hidden()
-        self.mean = opt.__dict__.get("lstm_mean",True) 
+        self.mean = opt.__dict__.get("lstm_mean",True)
         self.attn_fc = torch.nn.Linear(opt.embedding_dim, 1)
     def init_hidden(self,batch_size=None):
         if batch_size is None:
             batch_size= self.batch_size
-        
+
         if self.use_gpu:
             h0 = Variable(torch.zeros(2*self.num_layers, batch_size, self.hidden_dim // 2).cuda())
             c0 = Variable(torch.zeros(2*self.num_layers, batch_size, self.hidden_dim // 2).cuda())
@@ -143,7 +137,7 @@ class LSTMAttention(torch.nn.Module):
         # (batch, cell_size, seq_len) * (batch, seq_len, 1) = (batch, cell_size, 1)
         return torch.bmm(torch.transpose(rnn_out, 1, 2), weights).squeeze(2)
     # end method attention
-    
+
 
     def forward(self, X):
         embedded = self.word_embeddings(X)
