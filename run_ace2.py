@@ -101,7 +101,7 @@ tokenizer = _sbert_tmp._modules['0'].tokenizer
 del _sbert_tmp
 MAX_LEN = 64
 
-encoded = tokenizer.batch_encode_plus(
+encoded = tokenizer(
     headlines,
     add_special_tokens=True,
     max_length=MAX_LEN,
