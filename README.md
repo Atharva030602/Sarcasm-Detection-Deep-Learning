@@ -1,4 +1,32 @@
 # Affective and Contextual Embedding for Sarcasm Detection
+
+A comparative study of two deep neural language models for sarcasm detection, **ACE 1** and **ACE 2**,
+which extend BERT by combining affective and contextual representations of text.
+
+## Collaborators
+
+| Name | GitHub |
+| --- | --- |
+| Atharva Phadtare | [@Atharva030602](https://github.com/Atharva030602) |
+| Nimit Wadhwa | [@nimit05](https://github.com/nimit05) |
+
+## Attribution
+
+This repository builds on the reference implementation released by **Nastaran Babanejad, Heidar
+Davoudi, Aijun An and Manos Papagelis** for their COLING 2020 paper *"Affective and Contextual
+Embedding for Sarcasm Detection"*. The ACE 1 and ACE 2 model code originates from their work
+([@NastaranBa](https://github.com/NastaranBa)) and the full citation is given under
+[References](#references) below.
+
+Our contribution is the comparative evaluation of the two models, together with the dependency and
+environment fixes, linting cleanup, and the CPU/macOS and contextual-embedding runner scripts
+(`run_ace1.py`, `run_ace2.py`, `run_ace2_contextual_emotion.py`, `run_ace2_reddit_baseline.py`,
+`run_bilstm.py`, `run_sbert.py`).
+
+The original project ships without an explicit licence, so please refer to the original authors
+regarding reuse terms.
+
+---
 ![ACE1F](https://user-images.githubusercontent.com/32373744/96896414-77d59e80-145b-11eb-8d45-c3de7d139fad.png)
 
 **Overview of the Proposed Model ACE 1**
@@ -60,5 +88,3 @@ pip install -r requirements/requirements-cpu.txt
     url = "https://www.aclweb.org/anthology/2020.coling-main.20",
     pages = "225--243",
     }
-# Sarcasm-Detection
-# Sarcasm-Detection
