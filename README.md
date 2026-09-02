@@ -7,7 +7,7 @@ which extend BERT by combining affective and contextual representations of text.
 
 The Phase I presentation — covering the ACE 1 / ACE 2 architectures, the local
 implementation constraints, results and analysis — is in
-[docs/DL_Sarcasm_Detection_final.pdf](docs/DL_Sarcasm_Detection_final.pdf).
+[docs/Sarcasm_detection_overview.pdf](docs/Sarcasm_detection_overview.pdf).
 
 ## Collaborators
 
