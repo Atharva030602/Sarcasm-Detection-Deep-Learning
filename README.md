@@ -3,6 +3,12 @@
 A comparative study of two deep neural language models for sarcasm detection, **ACE 1** and **ACE 2**,
 which extend BERT by combining affective and contextual representations of text.
 
+## Project report
+
+The Phase I presentation — covering the ACE 1 / ACE 2 architectures, the local
+implementation constraints, results and analysis — is in
+[docs/DL_Sarcasm_Detection_final.pdf](docs/DL_Sarcasm_Detection_final.pdf).
+
 ## Collaborators
 
 | Name | GitHub |
